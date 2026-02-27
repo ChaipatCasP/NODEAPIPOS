@@ -120,4 +120,67 @@ const updateDetailStatus = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, closeOrder, updateDetailStatus };
+// POST /api/orders/open - เปิดออเดอร์ใหม่ (ยังไม่ต้องมีรายการสินค้า)
+// body: { customer_name, customer_tel, table_info_id, open_by }
+const fun_open_order = async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    const { customer_name, customer_tel, table_info_id, open_by } = req.body;
+
+    await conn.beginTransaction();
+
+    // ตรวจสอบว่าโต๊ะมีอยู่จริง (ถ้าระบุ table_info_id)
+    if (table_info_id) {
+      const [tables] = await conn.query(
+        'SELECT table_info_id, table_status FROM table_info WHERE table_info_id = ?',
+        [table_info_id]
+      );
+      if (tables.length === 0) {
+        await conn.rollback();
+        return res.status(404).json({ success: false, message: `ไม่พบโต๊ะ table_info_id: ${table_info_id}` });
+      }
+      if (tables[0].table_status === 'occupied') {
+        await conn.rollback();
+        return res.status(400).json({ success: false, message: 'โต๊ะนี้มีออเดอร์เปิดอยู่แล้ว' });
+      }
+
+      // อัปเดตสถานะโต๊ะเป็น occupied
+      await conn.query(
+        "UPDATE table_info SET table_status = 'occupied' WHERE table_info_id = ?",
+        [table_info_id]
+      );
+    }
+
+    // สร้าง order_header
+    const [result] = await conn.query(
+      `INSERT INTO order_header (customer_name, customer_tel, table_info_id, open_by, open_date)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [customer_name || 'ลูกค้าทั่วไป', customer_tel || null, table_info_id || null, open_by || null]
+    );
+    const order_header_id = result.insertId;
+
+    await conn.commit();
+
+    // ดึงข้อมูล order ที่เพิ่งสร้างพร้อมชื่อโต๊ะ
+    const [orderRows] = await db.query(
+      `SELECT oh.*, ti.name_th AS table_name, ti.code AS table_code
+       FROM order_header oh
+       LEFT JOIN table_info ti ON oh.table_info_id = ti.table_info_id
+       WHERE oh.order_header_id = ?`,
+      [order_header_id]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'เปิดออเดอร์สำเร็จ',
+      data: orderRows[0],
+    });
+  } catch (error) {
+    await conn.rollback();
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    conn.release();
+  }
+};
+
+module.exports = { getAll, getById, create, closeOrder, updateDetailStatus, fun_open_order };

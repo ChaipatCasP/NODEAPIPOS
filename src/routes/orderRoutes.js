@@ -21,6 +21,71 @@ const ctrl = require('../controllers/orderController');
  *                   type: array
  *                   items: { $ref: '#/components/schemas/OrderHeader' }
  */
+/**
+ * @swagger
+ * /api/orders/open:
+ *   post:
+ *     tags: [Orders]
+ *     summary: fun_open_order - เปิดออเดอร์ใหม่
+ *     description: |
+ *       สร้าง order_header ใหม่โดยยังไม่ต้องมีสินค้า
+ *       หากระบุ table_info_id จะอัปเดตสถานะโต๊ะเป็น **occupied** อัตโนมัติ
+ *       และจะตรวจสอบว่าโต๊ะไม่ได้ถูกใช้งานอยู่แล้ว
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               customer_name:
+ *                 type: string
+ *                 example: สมชาย ใจดี
+ *               customer_tel:
+ *                 type: string
+ *                 example: '0812345678'
+ *               table_info_id:
+ *                 type: integer
+ *                 example: 1
+ *               open_by:
+ *                 type: string
+ *                 example: staff01
+ *     responses:
+ *       201:
+ *         description: เปิดออเดอร์สำเร็จ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: เปิดออเดอร์สำเร็จ }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order_header_id: { type: integer, example: 5 }
+ *                     customer_name: { type: string, example: สมชาย ใจดี }
+ *                     customer_tel: { type: string, example: '0812345678' }
+ *                     table_info_id: { type: integer, example: 1 }
+ *                     table_name: { type: string, example: โต๊ะ A1 }
+ *                     table_code: { type: string, example: T01 }
+ *                     open_by: { type: string, example: staff01 }
+ *                     open_date: { type: string, format: date-time }
+ *                     close_date: { type: string, nullable: true }
+ *                     close_by: { type: string, nullable: true }
+ *       400:
+ *         description: โต๊ะมีออเดอร์เปิดอยู่แล้ว
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ *       404:
+ *         description: ไม่พบโต๊ะที่ระบุ
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ */
+router.post('/open', ctrl.fun_open_order);
+
 router.get('/', ctrl.getAll);
 
 /**
