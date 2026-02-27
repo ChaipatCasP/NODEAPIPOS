@@ -86,6 +86,78 @@ const ctrl = require('../controllers/orderController');
  */
 router.post('/open', ctrl.fun_open_order);
 
+/**
+ * @swagger
+ * /api/orders/add:
+ *   post:
+ *     tags: [Orders]
+ *     summary: fun_add_order - เพิ่มสินค้าเข้า order ที่มีอยู่
+ *     description: |
+ *       เพิ่มรายการสินค้าเข้า `order_details` ของ order ที่ระบุด้วย `order_header_id`
+ *       - ดึงราคาจากตาราง `products` อัตโนมัติ
+ *       - รองรับ `quantity` (ค่า default = 1)
+ *       - ตรวจสอบว่า order ยังไม่ถูกปิด (close_date เป็น NULL)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [order_header_id, items]
+ *             properties:
+ *               order_header_id:
+ *                 type: integer
+ *                 example: 1
+ *               create_by:
+ *                 type: string
+ *                 example: staff01
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [product_id]
+ *                   properties:
+ *                     product_id:
+ *                       type: integer
+ *                       example: 2
+ *                     quantity:
+ *                       type: integer
+ *                       example: 2
+ *                       description: จำนวนที่ต้องการเพิ่ม (default = 1)
+ *     responses:
+ *       201:
+ *         description: เพิ่มสินค้าสำเร็จ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: "เพิ่มสินค้าเข้า order #1 สำเร็จ 2 รายการ" }
+ *                 order_header_id: { type: integer, example: 1 }
+ *                 inserted:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       order_details_id: { type: integer }
+ *                       product_id: { type: integer }
+ *                       name_th: { type: string }
+ *                       price: { type: number }
+ *                       order_status: { type: string, example: pending }
+ *       400:
+ *         description: ออเดอร์ปิดแล้ว หรือข้อมูลไม่ครบ
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ *       404:
+ *         description: ไม่พบ order หรือสินค้า
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ */
+router.post('/add', ctrl.fun_add_order);
+
 router.get('/', ctrl.getAll);
 
 /**
@@ -149,21 +221,19 @@ router.post('/', ctrl.create);
 
 /**
  * @swagger
- * /api/orders/{id}/close:
- *   patch:
+ * /api/orders/close:
+ *   post:
  *     tags: [Orders]
  *     summary: ปิด order (บันทึก close_date, close_by)
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: integer }
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [order_header_id]
  *             properties:
+ *               order_header_id: { type: integer, example: 1 }
  *               close_by: { type: string, example: staff01 }
  *     responses:
  *       200:
@@ -171,13 +241,18 @@ router.post('/', ctrl.create);
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/SuccessResponse' }
+ *       400:
+ *         description: ไม่ระบุ order_header_id
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
  *       404:
- *         description: ไม่พบคำสั่งซื้อ
+ *         description: ไม่พบ order
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/ErrorResponse' }
  */
-router.patch('/:id/close', ctrl.closeOrder);
+router.post('/close', ctrl.closeOrder);
 
 /**
  * @swagger

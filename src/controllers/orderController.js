@@ -86,18 +86,22 @@ const create = async (req, res) => {
   }
 };
 
-// PATCH /api/orders/:id/close - ปิดออเดอร์
+// POST /api/orders/close - ปิดออเดอร์
+// body: { order_header_id, close_by }
 const closeOrder = async (req, res) => {
   try {
-    const { close_by } = req.body;
+    const { order_header_id, close_by } = req.body;
+    if (!order_header_id) {
+      return res.status(400).json({ success: false, message: 'กรุณาระบุ order_header_id' });
+    }
     const [result] = await db.query(
-      'UPDATE order_header SET close_date = NOW(), close_by = ? WHERE order_header_id = ?',
-      [close_by || null, req.params.id]
+      'UPDATE order_header SET close_date = NOW(), close_by = ? , status = ? WHERE order_header_id = ?',
+      [close_by || null, 'closed', order_header_id]
     );
     if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'ไม่พบคำสั่งซื้อ' });
+      return res.status(404).json({ success: false, message: `ไม่พบ order_header_id: ${order_header_id}` });
     }
-    res.json({ success: true, message: 'ปิดออเดอร์สำเร็จ' });
+    res.json({ success: true, message: 'ปิดออเดอร์สำเร็จ', order_header_id });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -183,4 +187,82 @@ const fun_open_order = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, closeOrder, updateDetailStatus, fun_open_order };
+// POST /api/orders/add - เพิ่มสินค้าเข้า order ที่มีอยู่แล้ว
+// body: { order_header_id, items: [{ product_id, quantity? }], create_by }
+const fun_add_order = async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    const { order_header_id, items, create_by } = req.body;
+
+    if (!order_header_id) {
+      return res.status(400).json({ success: false, message: 'กรุณาระบุ order_header_id' });
+    }
+    if (!items || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'กรุณาระบุสินค้าอย่างน้อย 1 รายการ' });
+    }
+
+    await conn.beginTransaction();
+
+    // ตรวจสอบว่า order_header มีอยู่จริง และยังไม่ปิด
+    const [orders] = await conn.query(
+      'SELECT order_header_id, close_date FROM order_header WHERE order_header_id = ?',
+      [order_header_id]
+    );
+    if (orders.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ success: false, message: `ไม่พบ order_header_id: ${order_header_id}` });
+    }
+    if (orders[0].close_date) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'ออเดอร์นี้ปิดไปแล้ว ไม่สามารถเพิ่มรายการได้' });
+    }
+
+    const inserted = [];
+
+    for (const item of items) {
+      if (!item.product_id) throw new Error('กรุณาระบุ product_id ในแต่ละรายการ');
+
+      // ดึงราคาจาก products
+      const [products] = await conn.query(
+        'SELECT product_id, name_th, price FROM products WHERE product_id = ?',
+        [item.product_id]
+      );
+      if (products.length === 0) throw new Error(`ไม่พบสินค้า product_id: ${item.product_id}`);
+
+      const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
+      const price = products[0].price;
+
+      // เพิ่มตาม quantity (1 row ต่อ 1 ชิ้น)
+      for (let i = 0; i < qty; i++) {
+        const [detail] = await conn.query(
+          `INSERT INTO order_details (order_header_id, product_id, price, order_status, create_by, create_date)
+           VALUES (?, ?, ?, 'pending', ?, NOW())`,
+          [order_header_id, item.product_id, price, create_by || null]
+        );
+        inserted.push({
+          order_details_id: detail.insertId,
+          product_id: item.product_id,
+          name_th: products[0].name_th,
+          price,
+          order_status: 'pending',
+        });
+      }
+    }
+
+    await conn.commit();
+
+    res.status(201).json({
+      success: true,
+      message: `เพิ่มสินค้าเข้า order #${order_header_id} สำเร็จ ${inserted.length} รายการ`,
+      order_header_id,
+      inserted,
+    });
+  } catch (error) {
+    await conn.rollback();
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    conn.release();
+  }
+};
+
+module.exports = { getAll, getById, create, closeOrder, updateDetailStatus, fun_open_order, fun_add_order };
