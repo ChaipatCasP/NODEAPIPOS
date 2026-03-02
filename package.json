@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "build": "node --check index.js && node --check src/controllers/authController.js && node --check src/controllers/productController.js && node --check src/controllers/orderController.js && node --check src/controllers/tableController.js && npx wrangler deploy --dry-run --outdir dist-worker worker.js && echo \"Build OK\"",
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "worker:dev": "wrangler dev worker.js",
+    "worker:deploy": "wrangler deploy worker.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,11 +15,14 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@hono/swagger-ui": "^0.5.3",
     "@supabase/supabase-js": "^2.98.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "hono": "^4.12.3",
+    "jose": "^6.1.3",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.18.2",
     "swagger-jsdoc": "^6.2.8",
@@ -24,6 +30,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "wrangler": "^4.69.0"
   }
 }

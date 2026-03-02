@@ -1,0 +1,17 @@
+name = "nodeapipos"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─────────────────────────────────────────────────────────────────────
+# Public env vars (safe to commit)
+# ─────────────────────────────────────────────────────────────────────
+[vars]
+SUPABASE_URL    = "https://agyfazwnsdcwymdyvlcx.supabase.co"
+JWT_EXPIRES_IN  = "7d"
+
+# ─────────────────────────────────────────────────────────────────────
+# Secrets  →  set via CLI (never stored here):
+#   npx wrangler secret put SUPABASE_KEY
+#   npx wrangler secret put JWT_SECRET
+# ─────────────────────────────────────────────────────────────────────

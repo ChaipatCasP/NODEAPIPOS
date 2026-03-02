@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "nodeapipos" generated at 2026-03-02T10:26:51.765Z.
