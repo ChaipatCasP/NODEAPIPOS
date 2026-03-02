@@ -40,3 +40,35 @@ INSERT INTO products (name, price, stock, category) VALUES
 ('ขนมปังแผ่น', 25.00, 50, 'อาหาร'),
 ('บะหมี่กึ่งสำเร็จรูป', 6.00, 200, 'อาหาร'),
 ('สบู่ก้อน', 35.00, 60, 'ของใช้');
+
+-- ─────────────────────────────────────────────────────────────────
+-- Seed: roles สำหรับระบบ Auth (รันครั้งเดียว)
+-- ─────────────────────────────────────────────────────────────────
+INSERT IGNORE INTO roles (role_id, role_code, role_name, is_active, created_at) VALUES
+  (UUID(), 'admin', 'Administrator', 1, NOW()),
+  (UUID(), 'staff', 'Staff',         1, NOW()),
+  (UUID(), 'manager', 'Manager',     1, NOW());
+
+-- Seed: permissions
+INSERT IGNORE INTO permissions (perm_id, perm_code, perm_name, module, created_at) VALUES
+  (UUID(), 'product:read',   'ดูสินค้า',         'product', NOW()),
+  (UUID(), 'product:write',  'เพิ่ม/แก้ไขสินค้า', 'product', NOW()),
+  (UUID(), 'product:delete', 'ลบสินค้า',          'product', NOW()),
+  (UUID(), 'order:read',     'ดูออเดอร์',         'order',   NOW()),
+  (UUID(), 'order:write',    'สร้าง/แก้ไขออเดอร์', 'order',  NOW()),
+  (UUID(), 'table:read',     'ดูโต๊ะ',            'table',   NOW()),
+  (UUID(), 'table:write',    'เพิ่ม/แก้ไขโต๊ะ',   'table',   NOW()),
+  (UUID(), 'user:manage',    'จัดการผู้ใช้',        'user',    NOW());
+
+-- Seed: admin role ได้ทุก permission
+INSERT IGNORE INTO role_permissions (role_id, perm_id, granted_at)
+SELECT r.role_id, p.perm_id, NOW()
+FROM roles r, permissions p
+WHERE r.role_code = 'admin';
+
+-- Seed: staff role ได้ read + order:write + table:read
+INSERT IGNORE INTO role_permissions (role_id, perm_id, granted_at)
+SELECT r.role_id, p.perm_id, NOW()
+FROM roles r
+JOIN permissions p ON p.perm_code IN ('product:read','order:read','order:write','table:read')
+WHERE r.role_code = 'staff';

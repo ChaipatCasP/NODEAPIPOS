@@ -7,6 +7,7 @@ const swaggerSpec = require('./src/config/swagger');
 const productRoutes = require('./src/routes/productRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
 const tableRoutes = require('./src/routes/tableRoutes');
+const authRoutes = require('./src/routes/authRoutes');
 
 const app = express();
 const PORT = process.env.APP_PORT || 3000;
@@ -24,6 +25,7 @@ app.get('/api-docs.json', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/tables', tableRoutes);
@@ -35,6 +37,7 @@ app.get('/', (req, res) => {
     message: 'Node API POS ทำงานอยู่',
     version: '1.0.0',
     endpoints: {
+      auth: '/api/auth',
       products: '/api/products',
       orders: '/api/orders',
       tables: '/api/tables',

@@ -15,11 +15,19 @@ const options = {
       },
     ],
     tags: [
+      { name: 'Auth', description: 'Login / Register / Profile' },
       { name: 'Products', description: 'จัดการสินค้า' },
       { name: 'Orders', description: 'จัดการคำสั่งซื้อ' },
       { name: 'Tables', description: 'จัดการโต๊ะ' },
     ],
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
       schemas: {
         Product: {
           type: 'object',
